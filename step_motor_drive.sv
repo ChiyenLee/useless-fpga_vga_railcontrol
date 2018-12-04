@@ -2,19 +2,19 @@
 johlee@g.hmc.edu Nov. 17, 2018 */
 
 module step_motor_drive(input logic clk, reset, en, load,
-						input logic [3:0] digit,
-								//input logic [7:0] num_steps,
+								input logic [3:0] digit,
 								output logic A1, A2, B1, B2);
 	
 	// if dir = 1, move forward 
 	// if dir = 0, move backward
 	// if en = 1, move motor. otherwise hold
 	
-	logic increment, stop; // flag to tell to count the step or not
+	logic increment, stop, dir, stop_flag; // flag to tell to count the step or not
 	logic [3:0] current_digit;
 	logic [18:0] q;
 	logic signed [13:0] steps; 
 	logic signed [13:0] delta_steps;
+	logic signed [13:0] step_increment;
 	
 	// temporary
 	logic signed [13:0] num_steps;
@@ -23,7 +23,8 @@ module step_motor_drive(input logic clk, reset, en, load,
 	assign slow_clk = q[18];
 	assign delta_steps = steps - num_steps; // steps to increment
 	assign dir = delta_steps[13];
-
+	assign step_increment = (dir) ? 1 : -1; 
+	
 	// store digit 
 	always_ff @(posedge clk)
 		if (load) current_digit <= digit;
@@ -43,10 +44,15 @@ module step_motor_drive(input logic clk, reset, en, load,
 		if (reset) begin state <= S0; steps <= 0; end
 		else begin
 			state <= nextstate;
-			if (increment) steps <= steps + {dir, 13'sd1};
+			if (increment & ~stop) steps <= steps + step_increment;
 		end
+/*		
+	always_ff @(posedge clk)
+		if (stop_flag) stop <= stop_flag;
+		else stop <= stop;
+	*/
 	
-	assign stop = (steps >= num_steps) ? 1'b1 : 1'b0;
+	assign stop = (steps == num_steps) ? 1'b1 : 1'b0;
 	
 	// nextstate logic
 	always_comb 
@@ -103,12 +109,13 @@ module step_motor_drive(input logic clk, reset, en, load,
 endmodule 
 
 module testbench();
-	logic clk, reset, step_size, dir, en;
+	logic clk, reset, step_size, en, load;
+	logic [3:0] digit;
 	logic [3:0] stepper_out;
 	logic [8:0] count;
 	logic [7:0] num_steps;
 	
-	step_motor_drive dut(clk, reset, dir, en, stepper_out[3], stepper_out[2], stepper_out[1], stepper_out[0]);
+	step_motor_drive dut(clk, reset, en, load, digit, stepper_out[3], stepper_out[2], stepper_out[1], stepper_out[0]);
 	
 	initial 
 		forever begin
@@ -118,15 +125,19 @@ module testbench();
 		
 	initial begin 
 		reset = 1'b1;
-		dir = 0;
 		en = 1;
+		load = 1;
 		count = 0;
+		digit = 4'd4;
 		num_steps = 20;
 	end
 	
 	always @(posedge clk) 
 	begin
 		if (count > 5) reset = 1'b0;
+		
+		if (count > 100) digit = 4'd4;
+		
 		count = count + 1;
 	end
 
