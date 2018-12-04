@@ -97,6 +97,7 @@ module step_motor_drive(input logic clk, reset, en, load,
 			4'd7: num_steps = 14'sd150;
 			4'd8: num_steps = 14'sd200;
 			4'd9: num_steps = 14'sd200;
+			default: num_steps = 14'sd0;
 		endcase
 
 endmodule 
