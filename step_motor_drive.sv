@@ -4,20 +4,21 @@ johlee@g.hmc.edu Nov. 17, 2018 */
 module step_motor_drive(input logic clk, reset, en, load,
 								input logic [3:0] digit,
 								output logic A1, A2, B1, B2,
-								output logic PWM1, PWM2);
+								output logic PWM1, PWM2,
+								output logic [3:0] led); // add led logic in a bit to see if it's actually reading stuff
 	
 	// if dir = 1, move forward 
 	// if dir = 0, move backward
 	// if en = 1, move motor. otherwise hold
 		
-	logic increment, stop, dir, stop_flag, position_reached; // flag to tell to count the step or not
+	logic increment, stop, dir, stop_flag, flip_digit; // flag to tell to count the step or not
 	logic [3:0] current_digit;
 	logic [18:0] q;
 	logic signed [13:0] steps; 
 	logic signed [13:0] delta_steps;
 	logic signed [13:0] step_increment;
 	
-	servo_control s1(clk, reset, position_reached, digit, PWM1, PWM2);
+	servo_control s1(clk, reset, flip_digit, digit, PWM1, PWM2);
 	
 	// temporary
 	logic signed [13:0] num_steps;
@@ -27,6 +28,7 @@ module step_motor_drive(input logic clk, reset, en, load,
 	assign delta_steps = steps - num_steps; // steps to increment
 	assign dir = delta_steps[13];
 	assign step_increment = (dir) ? 1 : -1; 
+	assign led = current_digit;
 	
 	// store digit 
 	always_ff @(posedge clk)
@@ -39,7 +41,7 @@ module step_motor_drive(input logic clk, reset, en, load,
 		else q <= q + 19'd1; 
 	
 	// define state that controls the steps 
-	typedef enum logic [4:0] {S0, S1, S2, S3, S4, hit} statetype;
+	typedef enum logic [4:0] {S0, S1, S2, S3, S4} statetype;
 	statetype state, nextstate; 
 	
 	// state transition
@@ -49,14 +51,9 @@ module step_motor_drive(input logic clk, reset, en, load,
 			state <= nextstate;
 			if (increment & ~stop) steps <= steps + step_increment;
 		end
-/*		
-	always_ff @(posedge clk)
-		if (stop_flag) stop <= stop_flag;
-		else stop <= stop;
-	*/
 	
 	assign stop = (steps == num_steps) ? 1'b1 : 1'b0;
-	
+	assign flip_digit = (stop & load);
 	// nextstate logic
 	always_comb 
 		case(state)
@@ -66,7 +63,6 @@ module step_motor_drive(input logic clk, reset, en, load,
 				 else nextstate = S0;
 			S1: if (en & dir & ~stop) nextstate = S2;
 				 else if (en & ~dir & ~stop) nextstate = S4; 
-				 else if (stop) nextstate = hit;
 				 else nextstate = S0;
 			S2: if (en & dir & ~stop) nextstate = S3;
 				 else if (en & ~dir & ~stop) nextstate = S1; 
@@ -78,22 +74,18 @@ module step_motor_drive(input logic clk, reset, en, load,
 				 else nextstate = S0;
 			S4: if (en & dir & ~stop) nextstate = S1;
 				 else if (en & ~dir & ~stop) nextstate = S3; 
-				 else if (stop) nextstate = hit;
 				 else nextstate = S0;
-			hit: nextstate = S0;
 			default: nextstate = S0; // always go back to S0 if enable is off
 		endcase
 	
 	// output logic 
 	always_comb
 		case(state)
-			S0: begin {A1, B1, A2, B2} = 4'b0000; increment = 0; position_reached = 0; end
-			S1: begin {A1, B1, A2, B2} = 4'b1100; if (~dir) increment = 1; else increment = 0; position_reached = 0; end
-			S2: begin {A1, B1, A2, B2} = 4'b0110; increment = 0; position_reached = 0;end
-			S3: begin {A1, B1, A2, B2} = 4'b0011; increment = 0; position_reached = 0; end
-			S4: begin {A1, B1, A2, B2} = 4'b1001; if (dir) increment = 1; else increment = 0; position_reached = 0; end
-			hit: begin {A1, B1, A2, B2} = 4'b1001; increment = 0; position_reached = 1; end
-			default: position_reached = 0;
+			S0: begin {A1, B1, A2, B2} = 4'b0000; increment = 0; end
+			S1: begin {A1, B1, A2, B2} = 4'b1100; if (~dir) increment = 1; else increment = 0; end
+			S2: begin {A1, B1, A2, B2} = 4'b0110; increment = 0; end
+			S3: begin {A1, B1, A2, B2} = 4'b0011; increment = 0; end
+			S4: begin {A1, B1, A2, B2} = 4'b1001; if (dir) increment = 1; else increment = 0;end
 		endcase
 
 	// run different number of steps according to the digit
@@ -116,7 +108,7 @@ endmodule
 
 module servo_control(input logic clk,
 							input logic reset,
-							input logic position_reached,
+							input logic start_push,
 							input logic [3:0] digit,
 							output logic servo_pwm1,
 							output logic servo_pwm2);
@@ -125,17 +117,21 @@ module servo_control(input logic clk,
 		logic [31:0] delay_count; 
 		logic is_left_servo;
 		logic engage, start_engaging; // delay it long enough for the servo to act
+		logic push_pulse;
+		
+		// level2pulse converter 
+		level2pulse L1(clk, reset, start_push, push_pulse);
 		
 		// wait for a bit before hitting
 		// TODO: fix this delay. it's a bit unelegant.
 		always_ff @(posedge clk)
 			if (reset) delay_count = 0;
-			else if (position_reached) delay_count <= 0;
+			else if (push_pulse) delay_count <= 0;
 			else if ( ~(delay_count == 31'd40000001)) delay_count <= delay_count + 1;
 			else delay_count <= delay_count;
 		
 		// engage 
-		assign engage = (delay_count >= 31'd20000000 & delay_count <= 31'd40000000);			
+		assign engage = (delay_count >= 31'd20000000 & delay_count <= 31'd40000000 & start_push);			
 		
 		assign rest_dutycycle = 20'd64000;
 		assign engaged_dutycycle1 = 20'd48000;
@@ -167,6 +163,35 @@ module servo_control(input logic clk,
 			
 		
 endmodule 
+
+// Generate a pulse when level changes from low to high
+module level2pulse(input clk,
+				       input reset,
+						 input level,
+						 output pulse);
+	typedef enum logic [1:0] {Low, Write, High} statetype;
+	statetype state, nextstate;
+	
+	// State register
+	always_ff @(posedge clk, posedge reset) 
+		if (reset) state <= Low;
+		else       state <= nextstate; 
+	
+	// next state logic 
+   always_comb
+		case(state)
+			Low:if (level) nextstate=Write;
+				 else nextstate=Low;
+			Write:nextstate=High;
+			High:if (level) nextstate=High;
+				  else nextstate=Low;
+			default:nextstate=Low;
+		endcase 
+	
+	assign pulse=(state==Write);
+	
+endmodule 
+
 
 module testbench();
 	logic clk, reset, step_size, en, load;
