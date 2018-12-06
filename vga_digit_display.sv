@@ -5,9 +5,9 @@
 // 
 
 module vga_digit_display(input  logic       clk, reset,
-                         input  logic [3:0] digit,
-                         input  logic       digitEn,
-                         output logic       hSync, vSync, R, G, B);
+			 input  logic [3:0] digit,
+			 input  logic       digitEn, instrEn,
+			 output logic       hSync, vSync, R, G, B);
 
   logic [9:0] x, y;
   logic       valid;
@@ -19,7 +19,7 @@ module vga_digit_display(input  logic       clk, reset,
   vga_driver driver(pixClk, reset, hSync, vSync, x, y, valid);
 
   // generate video
-  video_gen video(clk, reset, digit, digitEn, x, y, R, G, B);
+  video_gen video(clk, reset, digit, digitEn, instrEn, x, y, R, G, B);
 endmodule 
 
 
@@ -77,17 +77,17 @@ endmodule
 
 // Generates the video signals (digit in white & text in cyan)
 module video_gen(input  logic       clk, reset,
-                 input  logic [3:0] digit,
-                 input  logic       digitEn,
-                 input  logic [9:0] x, y,
-                 output logic       R, G, B);
+		 input  logic [3:0] digit,
+		 input  logic       digitEn, instrEn,
+		 input  logic [9:0] x, y,
+		 output logic       R, G, B);
 
   logic       digPix, txtPix;
   logic [3:0] txtSelect;      // chooses which of the 10 strings to display
 
-  text_select_lfsr_rng tslr(clk, reset, digit, digitEn, txtSelect);
+  text_select_lfsr_rng tslr(clk, reset, digit, instrEn, txtSelect);
 
-  dig_gen_rom dgr(digit, digitEn, x, y, digPix);
+  dig_gen_rom dgr(digit, digitEn, instrEn, x, y, digPix);
   txt_gen_rom tgr(txtSelect, x, y, txtPix);
 
   // Produce RGB signals
@@ -100,10 +100,10 @@ endmodule
 //  Holds selection until digit changes
 //   https://www.eetimes.com/document.asp?doc_id=1274550&page_number=2 => for maximal LFSR polynomial
 module text_select_lfsr_rng#(parameter OPTIONS = 4'd10) // Number strings to be selected from
-                           (input  logic       clk, reset,
-                            input  logic [3:0] digit,
-                            input  logic       digitEn,
-                            output logic [3:0] txtSelect);
+			   (input  logic       clk, reset,
+			    input  logic [3:0] digit,
+			    input  logic       instrEn,
+			    output logic [3:0] txtSelect);
 
   logic [4:0] q;
   logic [3:0] digitPrev;
@@ -128,9 +128,9 @@ module text_select_lfsr_rng#(parameter OPTIONS = 4'd10) // Number strings to be 
     else         q <= q;
   end
 
-  assign txtSelect = (digitEn) ? ((q[3:0] > 4'd0 & q[3:0] < OPTIONS) ?
-                                   q[3:0] : {1'b0, q[3:1]})
-                               : 4'd0;     // 0 for instructions
+  assign txtSelect = (instrEn) ? 4'd0        // 0 for instructions
+                               : ((q[3:0] > 4'd0 & q[3:0] < OPTIONS) ?
+                                   q[3:0] : {1'b0, q[3:1])
 
 endmodule
 
@@ -145,7 +145,7 @@ module dig_gen_rom#(parameter SIZE    = 10'd320,
                               Y_END   = Y_START + SIZE,
                               Y_DIV   = 10'd40)  // SIZE / 8 (rows of digit)
                   (input  logic [3:0] digit,
-                   input  logic       digitEn,
+                   input  logic       digitEn, instrEn,
                    input  logic [9:0] x, y,
                    output logic       pixel);
 
@@ -166,7 +166,7 @@ module dig_gen_rom#(parameter SIZE    = 10'd320,
 
   // extract the current line from the desired digit
   //  6x8 digit; digit * 8 + curr_y gives the line from ROM
-  assign line = (digitEn) ? {digrom[yoff+{digit, 3'b000}]} : 6'd0;
+  assign line = (digitEn & ~instrEn) ? {digrom[yoff+{digit, 3'b000}]} : 6'd0;
 
   // reverse the bit order and extract current pixel
   assign pixel = (valid) ? line[3'd5 - xoff] : 1'd0;
