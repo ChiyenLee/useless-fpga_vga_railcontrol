@@ -38,7 +38,7 @@
 
 set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name DEVICE EP4CE6E22C8
-set_global_assignment -name TOP_LEVEL_ENTITY step_motor_drive
+set_global_assignment -name TOP_LEVEL_ENTITY useless_driver
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION "13.0 SP1"
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "14:12:51  NOVEMBER 17, 2018"
 set_global_assignment -name LAST_QUARTUS_VERSION "13.0 SP1"
@@ -50,17 +50,32 @@ set_global_assignment -name NOMINAL_CORE_SUPPLY_VOLTAGE 1.2V
 set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (SystemVerilog)"
 set_global_assignment -name EDA_OUTPUT_DATA_FORMAT "SYSTEMVERILOG HDL" -section_id eda_simulation
 set_global_assignment -name SYSTEMVERILOG_FILE step_motor_drive.sv
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "2.5 V"
 set_location_assignment PIN_31 -to A1
 set_location_assignment PIN_32 -to A2
 set_location_assignment PIN_33 -to B1
 set_location_assignment PIN_34 -to B2
 set_location_assignment PIN_88 -to clk
-set_location_assignment PIN_38 -to dir
-set_location_assignment PIN_39 -to en
 set_location_assignment PIN_42 -to reset
 set_global_assignment -name CDF_FILE output_files/Chain2.cdf
+set_location_assignment PIN_111 -to digit[0]
+set_location_assignment PIN_110 -to digit[1]
+set_location_assignment PIN_106 -to digit[2]
+set_location_assignment PIN_105 -to digit[3]
+set_location_assignment PIN_67 -to load
+set_location_assignment PIN_49 -to PWM1
+set_location_assignment PIN_50 -to PWM2
+set_global_assignment -name SYSTEMVERILOG_FILE output_files/vga_digit_display.sv
+set_global_assignment -name SYSTEMVERILOG_FILE output_files/useless_driver.sv
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_location_assignment PIN_100 -to B
+set_location_assignment PIN_103 -to G
+set_location_assignment PIN_104 -to R
+set_location_assignment PIN_99 -to hSync
+set_location_assignment PIN_98 -to vSync
+set_global_assignment -name VERILOG_FILE vga_pll.v
+set_global_assignment -name SYSTEMVERILOG_FILE useless_driver.sv
+set_global_assignment -name SYSTEMVERILOG_FILE vga_digit_display.sv
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

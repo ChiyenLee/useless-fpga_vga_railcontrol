@@ -1,19 +1,19 @@
 /* Stepper motor driver 
 johlee@g.hmc.edu Nov. 17, 2018 */
 
-module step_motor_drive(input logic clk, reset, en, load,
-								input logic [3:0] digit,
-								output logic A1, A2, B1, B2,
-								output logic PWM1, PWM2,
-								output logic [3:0] led); // add led logic in a bit to see if it's actually reading stuff
+module step_motor_drive(input logic clk, reset, load,
+			input logic [3:0] digit,
+			output logic A1, A2, B1, B2,
+			output logic PWM1, PWM2); 
 	
 	// if dir = 1, move forward 
 	// if dir = 0, move backward
 	// if en = 1, move motor. otherwise hold
 		
-	logic increment, stop, dir, stop_flag, flip_digit; // flag to tell to count the step or not
-	logic [3:0] current_digit;
+	logic        increment, stop, dir, stop_flag, flip_digit; // flag to tell to count the step or not
+	logic [3:0]  current_digit;
 	logic [18:0] q;
+	logic        en; assign en = 1;
 	logic signed [13:0] steps; 
 	logic signed [13:0] delta_steps;
 	logic signed [13:0] step_increment;
@@ -27,8 +27,7 @@ module step_motor_drive(input logic clk, reset, en, load,
 	assign slow_clk = q[18];
 	assign delta_steps = steps - num_steps; // steps to increment
 	assign dir = delta_steps[13];
-	assign step_increment = (dir) ? 1 : -1; 
-	assign led = current_digit;
+	assign step_increment = (dir) ? 14'sd1 : -14'sd1; 
 	
 	// store digit 
 	always_ff @(posedge clk)
@@ -54,6 +53,7 @@ module step_motor_drive(input logic clk, reset, en, load,
 	
 	assign stop = (steps == num_steps) ? 1'b1 : 1'b0;
 	assign flip_digit = (stop & load);
+	
 	// nextstate logic
 	always_comb 
 		case(state)
@@ -91,27 +91,25 @@ module step_motor_drive(input logic clk, reset, en, load,
 	// run different number of steps according to the digit
 	always_comb 
 		case(current_digit)
-			4'd0: num_steps = 14'sd0;
-			4'd1: num_steps = 14'sd0;
-			4'd2: num_steps = 14'sd50;
-			4'd3: num_steps = 14'sd50;
-			4'd4: num_steps = 14'sd100;
-			4'd5: num_steps = 14'sd100;
-			4'd6: num_steps = 14'sd150;
-			4'd7: num_steps = 14'sd150;
-			4'd8: num_steps = 14'sd200;
-			4'd9: num_steps = 14'sd200;
+			4'd0:    num_steps = 14'sd0;
+			4'd1:    num_steps = 14'sd0;
+			4'd2:    num_steps = 14'sd50;
+			4'd3:    num_steps = 14'sd50;
+			4'd4:    num_steps = 14'sd100;
+			4'd5:    num_steps = 14'sd100;
+			4'd6:    num_steps = 14'sd150;
+			4'd7:    num_steps = 14'sd150;
+			4'd8:    num_steps = 14'sd200;
+			4'd9:    num_steps = 14'sd200;
 			default: num_steps = 14'sd0;
 		endcase
 		
 endmodule 
 
-module servo_control(input logic clk,
-							input logic reset,
-							input logic start_push,
-							input logic [3:0] digit,
-							output logic servo_pwm1,
-							output logic servo_pwm2);
+module servo_control(input  logic       clk, reset,
+                     input  logic       start_push,
+                     input  logic [3:0] digit,
+                     output logic       servo_pwm1, servo_pwm2);
 		
 		logic [19:0] duty_cycle1, duty_cycle2, count, rest_dutycycle, engaged_dutycycle1, engaged_dutycycle2;
 		logic [31:0] delay_count; 
@@ -133,16 +131,16 @@ module servo_control(input logic clk,
 		// engage 
 		assign engage = (delay_count >= 31'd20000000 & delay_count <= 31'd40000000 & start_push);			
 		
-		assign rest_dutycycle = 20'd64000;
+		assign rest_dutycycle     = 20'd64000;
 		assign engaged_dutycycle1 = 20'd48000;
 		assign engaged_dutycycle2 = 20'd80000;
 
-		assign is_left_servo = (digit % 2) ? 1 : 0;
+		assign is_left_servo = (digit % 2) ? 1'd1 : 1'd0;
 		
 		// establishing a 20ms update rate
 		always_ff @(posedge clk)
 			if (reset || count == 20'd800000) count = 20'b0;
-			else count <= count + 1;
+			else count <= count + 20'd1;
 		
 		// creating pwm 
 		always_ff @(posedge clk)
@@ -156,19 +154,26 @@ module servo_control(input logic clk,
 		// select the duty cycle 
 		always_comb 
 			case(engage)
-				1'b1: if (is_left_servo) begin duty_cycle1 = engaged_dutycycle1; duty_cycle2 = rest_dutycycle; end
-						else begin duty_cycle2 = engaged_dutycycle2; duty_cycle1 = rest_dutycycle; end
-				default: begin duty_cycle1 = rest_dutycycle; duty_cycle2 = rest_dutycycle; end
+				1'b1: if (is_left_servo) begin 
+				        duty_cycle1 = engaged_dutycycle1;
+						  duty_cycle2 = rest_dutycycle;
+						end else begin
+						  duty_cycle2 = engaged_dutycycle2;
+						  duty_cycle1 = rest_dutycycle;
+						end
+				default: begin 
+				           duty_cycle1 = rest_dutycycle;
+							  duty_cycle2 = rest_dutycycle;
+							end
 			endcase
 			
 		
 endmodule 
 
 // Generate a pulse when level changes from low to high
-module level2pulse(input clk,
-				       input reset,
-						 input level,
-						 output pulse);
+module level2pulse(input  logic clk, reset,
+                   input  logic level,
+                   output logic pulse);
 	typedef enum logic [1:0] {Low, Write, High} statetype;
 	statetype state, nextstate;
 	

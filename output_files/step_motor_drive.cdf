@@ -4,7 +4,7 @@ JedecChain;
 	DefaultMfr(6E);
 
 	P ActionCode(Cfg)
-		Device PartName(EP4CE6E22) Path("F:/E155/final_project/output_files/") File("step_motor_drive.sof") MfrSpec(OpMask(1));
+		Device PartName(EP4CE6) Path("F:/E155/final_project/output_files/") File("output_file.jic") MfrSpec(OpMask(1) SEC_Device(EPCQ16) Child_OpMask(1 3));
 
 ChainEnd;
 
