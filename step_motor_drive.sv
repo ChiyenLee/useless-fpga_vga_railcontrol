@@ -2,9 +2,9 @@
 johlee@g.hmc.edu Nov. 17, 2018 */
 
 module step_motor_drive(input logic clk, reset, load,
-			input logic [3:0] digit,
-			output logic A1, A2, B1, B2,
-			output logic PWM1, PWM2); 
+								input logic [3:0] digit,
+								output logic A1, A2, B1, B2,
+								output logic PWM1, PWM2); 
 	
 	// if dir = 1, move forward 
 	// if dir = 0, move backward
@@ -93,23 +93,23 @@ module step_motor_drive(input logic clk, reset, load,
 		case(current_digit)
 			4'd0:    num_steps = 14'sd0;
 			4'd1:    num_steps = 14'sd0;
-			4'd2:    num_steps = 14'sd50;
-			4'd3:    num_steps = 14'sd50;
-			4'd4:    num_steps = 14'sd100;
-			4'd5:    num_steps = 14'sd100;
-			4'd6:    num_steps = 14'sd150;
-			4'd7:    num_steps = 14'sd150;
-			4'd8:    num_steps = 14'sd200;
-			4'd9:    num_steps = 14'sd200;
+			4'd2:    num_steps = 14'sd65;
+			4'd3:    num_steps = 14'sd65;
+			4'd4:    num_steps = 14'sd130;
+			4'd5:    num_steps = 14'sd130;
+			4'd6:    num_steps = 14'sd205;
+			4'd7:    num_steps = 14'sd205;
+			4'd8:    num_steps = 14'sd270;
+			4'd9:    num_steps = 14'sd270;
 			default: num_steps = 14'sd0;
 		endcase
 		
 endmodule 
 
 module servo_control(input  logic       clk, reset,
-                     input  logic       start_push,
-                     input  logic [3:0] digit,
-                     output logic       servo_pwm1, servo_pwm2);
+							input  logic       start_push,
+							input  logic [3:0] digit,
+							output logic       servo_pwm1, servo_pwm2);
 		
 		logic [19:0] duty_cycle1, duty_cycle2, count, rest_dutycycle, engaged_dutycycle1, engaged_dutycycle2;
 		logic [31:0] delay_count; 
@@ -132,8 +132,8 @@ module servo_control(input  logic       clk, reset,
 		assign engage = (delay_count >= 31'd20000000 & delay_count <= 31'd40000000 & start_push);			
 		
 		assign rest_dutycycle     = 20'd64000;
-		assign engaged_dutycycle1 = 20'd48000;
-		assign engaged_dutycycle2 = 20'd80000;
+		assign engaged_dutycycle1 = 20'd80000;
+		assign engaged_dutycycle2 = 20'd48000;
 
 		assign is_left_servo = (digit % 2) ? 1'd1 : 1'd0;
 		
@@ -171,9 +171,10 @@ module servo_control(input  logic       clk, reset,
 endmodule 
 
 // Generate a pulse when level changes from low to high
-module level2pulse(input  logic clk, reset,
-                   input  logic level,
-                   output logic pulse);
+module level2pulse(input clk,
+				       input reset,
+						 input level,
+						 output pulse);
 	typedef enum logic [1:0] {Low, Write, High} statetype;
 	statetype state, nextstate;
 	
