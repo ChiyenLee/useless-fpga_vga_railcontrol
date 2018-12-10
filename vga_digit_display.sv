@@ -85,10 +85,10 @@ module video_gen(input  logic       clk, reset,
   logic       digPix, txtPix;
   logic [3:0] txtSelect;      // chooses which of the 10 strings to display
 
-  text_select_lfsr_rng tslr(clk, reset, digit, instrEn, txtSelect);
+  text_select_lfsr_rng tslr(clk, reset, digit, txtSelect);
 
   dig_gen_rom dgr(digit, digitEn, instrEn, x, y, digPix);
-  txt_gen_rom tgr(txtSelect, x, y, txtPix);
+  txt_gen_rom tgr(txtSelect, instrEn, x, y, txtPix);
 
   // Produce RGB signals
   assign {R, G, B} = {digPix, (digPix | txtPix), (digPix | txtPix)};
@@ -102,7 +102,6 @@ endmodule
 module text_select_lfsr_rng#(parameter OPTIONS = 4'd10) // Number strings to be selected from
 			   (input  logic       clk, reset,
 			    input  logic [3:0] digit,
-			    input  logic       instrEn,
 			    output logic [3:0] txtSelect);
 
   logic [4:0] q;
@@ -128,9 +127,8 @@ module text_select_lfsr_rng#(parameter OPTIONS = 4'd10) // Number strings to be 
     else         q <= q;
   end
 
-  assign txtSelect = (instrEn) ? 4'd0        // 0 for instructions
-                               : ((q[3:0] > 4'd0 & q[3:0] < OPTIONS) ?
-                                  q[3:0] : {1'b0, q[3:1]});
+  assign txtSelect = ((q[3:0] > 4'd0 & q[3:0] < OPTIONS) ?
+                       q[3:0] : {1'b0, q[3:1]});
 
 endmodule
 
@@ -184,6 +182,7 @@ module txt_gen_rom#(parameter SCALE    = 10'd2,
                               Y_END    = Y_START + HEIGHT,
                               TXT_SIZE = 6'd53)
                   (input  logic [3:0] txtSelect,
+                   input  logic       instrEn,
                    input  logic [9:0] x, y,
                    output logic       pixel);
 
@@ -208,7 +207,8 @@ module txt_gen_rom#(parameter SCALE    = 10'd2,
 
   // determine the character to be displayed
   assign charPos = x / WIDTH;
-  assign txtPos  = txtSelect * TXT_SIZE;
+  assign txtPos  = (instrEn) ? 10'd0        // 0 for instructions
+                             : txtSelect * TXT_SIZE;
   assign char    = {txtrom[txtPos+charPos]};
 
   // extract the current line from the desired character
