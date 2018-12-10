@@ -130,7 +130,7 @@ module text_select_lfsr_rng#(parameter OPTIONS = 4'd10) // Number strings to be 
 
   assign txtSelect = (instrEn) ? 4'd0        // 0 for instructions
                                : ((q[3:0] > 4'd0 & q[3:0] < OPTIONS) ?
-                                   q[3:0] : {1'b0, q[3:1])
+                                  q[3:0] : {1'b0, q[3:1]});
 
 endmodule
 
