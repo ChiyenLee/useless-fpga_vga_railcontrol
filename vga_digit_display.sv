@@ -1,9 +1,13 @@
-//
-// Top-level module of VGA digit display
-// Jingnan Shi | David E Olumese
-// 11/26/2018
+// vga_digit_display.sv
+//   David E Olumese | Nov. 26th 2018
 // 
-
+/////////////////////////////////////////////  
+// vga_digit_display  
+//   Top-level module of VGA digit display. Control the SRT VGA digit,
+//   displaying the detected number to the screen along with a pseudo-randomly
+//   selected text message. If the instruction request button is press, the
+//   instruction text is displayed.
+///////////////////////////////////////////// 
 module vga_digit_display(input  logic       clk, reset,
 			 input  logic [3:0] digit,
 			 input  logic       digitEn, instrEn,
@@ -23,23 +27,21 @@ module vga_digit_display(input  logic       clk, reset,
 endmodule 
 
 
-// Module for generating x, y, hsync, vsync, valid
-// pix_clk: 25.175 MHz
-// Screen Refresh Rate: 60 Hz
-//
-// VGA Timing data: http://martin.hinner.info/vga/timing.html
-// Horizontal => Pixels
-// Vertical => Lines
-// AV  => Active Video
-// FP  => Front Porch
-// SP  => Sync Pulse
-// BP  => Back Porch
-// END => Total pixels
-module vga_driver#(parameter H_AV  = 10'd640,
-                             H_FP  = 10'd16,
-                             H_SP  = 10'd96,
-                             H_BP  = 10'd48,
-                             H_END = H_AV + H_FP + H_SP + H_BP,
+/////////////////////////////////////////////  
+// vga_driver
+//  VGA display interface. Produces the synchroziation signals and the current
+//  pixel location (x, y). Uses a 25.175 MHz pixel clock generating a 60 Hz
+//  screen refresh rate.
+//  Notes:
+//    Horizontal => Pixels
+//    Vertical => Lines
+//  VGA Timing data: http://martin.hinner.info/vga/timing.html
+///////////////////////////////////////////// 
+module vga_driver#(parameter H_AV  = 10'd640, // AV  => Active Video
+                             H_FP  = 10'd16,  // FP  => Front Porch
+                             H_SP  = 10'd96,  // SP  => Sync Pulse
+                             H_BP  = 10'd48,  // BP  => Back Porch
+                             H_END = H_AV + H_FP + H_SP + H_BP, // END => Total pixels
                              V_AV  = 10'd480,
                              V_FP  = 10'd11,
                              V_SP  = 10'd2,
@@ -74,8 +76,11 @@ module vga_driver#(parameter H_AV  = 10'd640,
   end
 endmodule
 
-
-// Generates the video signals (digit in white & text in cyan)
+/////////////////////////////////////////////  
+// video_gen
+//   Generates the video signals. Digit displayed in  white and the text in 
+//   cyan.
+///////////////////////////////////////////// 
 module video_gen(input  logic       clk, reset,
 		 input  logic [3:0] digit,
 		 input  logic       digitEn, instrEn,
@@ -95,10 +100,12 @@ module video_gen(input  logic       clk, reset,
 
 endmodule
 
-
-// A 5-bit LFSR puesdo-number generator
-//  Holds selection until digit changes
-//   https://www.eetimes.com/document.asp?doc_id=1274550&page_number=2 => for maximal LFSR polynomial
+/////////////////////////////////////////////  
+// text_select_lfsr_rng  
+//   A 5-bit LFSR puesdo-number generator. Holds the selection until the digit
+//   changes. The maximal LFSR polynomial from:
+//     https://www.eetimes.com/document.asp?doc_id=1274550&page_number=2 => for maximal LFSR polynomial
+///////////////////////////////////////////// 
 module text_select_lfsr_rng#(parameter OPTIONS = 4'd10) // Number strings to be selected from
 			   (input  logic       clk, reset,
 			    input  logic [3:0] digit,
@@ -132,9 +139,12 @@ module text_select_lfsr_rng#(parameter OPTIONS = 4'd10) // Number strings to be 
 
 endmodule
 
-
-// Digit generation (320x320 digit horizontally centered on screen)
-//  using a 10 digit 6x8 ROM from a text file
+/////////////////////////////////////////////  
+// dig_gen_rom
+//   Generates the 320x320 digit pixels using a 10 digit 6x8 ROM from a text
+//   file. The digit is horizontally centered on screen and in the top 3/4th
+//   section of the screen. 
+///////////////////////////////////////////// 
 module dig_gen_rom#(parameter SIZE    = 10'd320,
                               X_START = 10'd160,
                               X_END   = X_START + SIZE - 10'd2, // offset due to division resolution
@@ -171,9 +181,12 @@ module dig_gen_rom#(parameter SIZE    = 10'd320,
 
 endmodule
 
-
-// Text generation (12x16 characters horizontally centered on screen)
-//  using a 29 char 6x8 ROM from a text file
+/////////////////////////////////////////////  
+// txt_gen_rom
+//   Generates the 12x16 character pixels using a 29 character 6x8 ROM from
+//   a text file. The sequence of characters are horizontally centered on
+//   screen and in the bottom 1/4th section of the screen. 
+///////////////////////////////////////////// 
 module txt_gen_rom#(parameter SCALE    = 10'd2,
                               WIDTH    = 10'd12,
                               HEIGHT   = 10'd16,
@@ -221,7 +234,10 @@ module txt_gen_rom#(parameter SCALE    = 10'd2,
 endmodule
 
 
-// Simple test module: Draw a red square to the screen
+/////////////////////////////////////////////  
+// gen_red_square
+//   [Simple test module] Draws a red square on the screen
+///////////////////////////////////////////// 
 module gen_red_square(input  logic [9:0] x, y,
                       output logic       R, G, B);
 

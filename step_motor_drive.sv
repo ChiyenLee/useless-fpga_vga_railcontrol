@@ -1,6 +1,12 @@
-/* Stepper motor driver 
-johlee@g.hmc.edu Nov. 17, 2018 */
+// step_motor_driver.sv 
+//   johlee@g.hmc.edu | Nov. 17, 2018
 
+/////////////////////////////////////////////  
+// step_motor_drive  
+//  Top-level module of the linear rail motor controller.
+//  Reads in the digit, controls the motor to move block to appropriate
+//  location, then flips the box switch using servo control.  
+///////////////////////////////////////////// 
 module step_motor_drive(input logic clk, reset, load,
 								input logic [3:0] digit,
 								output logic A1, A2, B1, B2,
@@ -11,7 +17,6 @@ module step_motor_drive(input logic clk, reset, load,
 	// if en = 1, move motor. otherwise hold
 		
 	logic        increment, stop, dir, stop_flag, flip_digit; // flag to tell to count the step or not
-	logic [3:0]  current_digit;
 	logic [18:0] q;
 	logic        en; assign en = 1;
 	logic signed [13:0] steps; 
@@ -28,11 +33,6 @@ module step_motor_drive(input logic clk, reset, load,
 	assign delta_steps = steps - num_steps; // steps to increment
 	assign dir = delta_steps[13];
 	assign step_increment = (dir) ? 14'sd1 : -14'sd1; 
-	
-	// store digit 
-	always_ff @(posedge clk)
-		if (load) current_digit <= digit;
-		else current_digit <= current_digit; 
 
 	// modulate a slower clock
 	always_ff @(posedge clk, posedge reset)
@@ -90,7 +90,7 @@ module step_motor_drive(input logic clk, reset, load,
 
 	// run different number of steps according to the digit
 	always_comb 
-		case(current_digit)
+		case(digit)
 			4'd0:    num_steps = 14'sd0;
 			4'd1:    num_steps = 14'sd0;
 			4'd2:    num_steps = 14'sd65;
@@ -106,6 +106,12 @@ module step_motor_drive(input logic clk, reset, load,
 		
 endmodule 
 
+
+/////////////////////////////////////////////  
+// servo_control
+//  Controls the appropriate servo to flip the box switch. Controls the right
+//  servo if the digit is even and the left if odd.  
+///////////////////////////////////////////// 
 module servo_control(input  logic       clk, reset,
 							input  logic       start_push,
 							input  logic [3:0] digit,
@@ -170,7 +176,10 @@ module servo_control(input  logic       clk, reset,
 		
 endmodule 
 
-// Generate a pulse when level changes from low to high
+/////////////////////////////////////////////  
+// level2pulse  
+//   Generates a pulse when level changes from low to high
+///////////////////////////////////////////// 
 module level2pulse(input clk,
 				       input reset,
 						 input level,
