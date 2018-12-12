@@ -17,7 +17,7 @@ module step_motor_drive(input logic clk, reset, load,
 	// if en = 1, move motor. otherwise hold
 		
 	logic        increment, stop, dir, stop_flag, flip_digit; // flag to tell to count the step or not
-	logic [18:0] q;
+	logic [21:0] q;
 	logic        en; assign en = 1;
 	logic signed [13:0] steps; 
 	logic signed [13:0] delta_steps;
@@ -29,7 +29,7 @@ module step_motor_drive(input logic clk, reset, load,
 	logic signed [13:0] num_steps;
 	logic slow_clk;
 	
-	assign slow_clk = q[18];
+	assign slow_clk = q[21];
 	assign delta_steps = steps - num_steps; // steps to increment
 	assign dir = delta_steps[13];
 	assign step_increment = (dir) ? 14'sd1 : -14'sd1; 
@@ -37,7 +37,7 @@ module step_motor_drive(input logic clk, reset, load,
 	// modulate a slower clock
 	always_ff @(posedge clk, posedge reset)
 		if (reset) q <= 0;
-		else q <= q + 19'd1; 
+		else q <= q + 22'd13; 
 	
 	// define state that controls the steps 
 	typedef enum logic [4:0] {S0, S1, S2, S3, S4} statetype;
